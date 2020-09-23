@@ -13,14 +13,6 @@ import ABR.Util.Pos
 import ABR.Parser
 import ABR.Parser.Lexers
 
--- JsonDocument
-data JsonDocument = JsonDocument [JsonObject]
-    deriving (Show)
-
--- JsonObject
-data JsonObject = JsonObject [JsonMember]
-    deriving (Show)
-
 -- JsonMember
 data JsonMember = JsonMember String JsonValue
     deriving (Show)
@@ -32,7 +24,7 @@ data JsonValue =
     | JsonNumber Double
     | JsonString String
     | JsonArray [JsonValue]
-    | JsonObjectValue JsonObject
+    | JsonObject [JsonMember]
     deriving (Show)
 
 
@@ -71,7 +63,10 @@ arrayP =
                              &> valueP)
                    @> (\(v, vs)-> (v:vs))))
     <&  literalP "']'" "]"
-    @> (\(vs:_)-> JsonArray vs)
+    @> (\(vs) -> case vs of
+        [] -> JsonArray []
+        (vs':_) -> JsonArray vs'
+       )
 
 memberP :: Parser JsonMember
 memberP = 
@@ -80,7 +75,7 @@ memberP =
       &> valueP
       @> (\((_,s,_), v) -> JsonMember s v)
 
-objectP :: Parser JsonObject
+objectP :: Parser JsonValue
 objectP = 
         literalP "'{'" "{"
      &> optional ((    memberP 
@@ -88,7 +83,10 @@ objectP =
                              &> memberP)
                    @> (\(m, ms)-> (m:ms))))
     <&  literalP "'}'" "}"
-    @> (\(ms:_) -> JsonObject ms)
+    @> (\ms -> case ms of 
+        []     -> JsonObject []
+        (ms':_) -> JsonObject ms'
+       )
     
     
 
@@ -105,17 +103,11 @@ valueP =
     <|> literalP "keyword" "null"
         @> (\_ -> JsonNull)
     <|> objectP
-        @> (\o -> JsonObjectValue o)
     <|> arrayP
 
 
-jsonP :: Parser JsonDocument
-jsonP = nofail $ total $ 
-            optional ((    objectP
-                       <&> many (   literalP "','" ","
-                                 &> objectP)
-                   @> (\(o, os)-> (o:os))))
-            @> (\(os:_) -> JsonDocument os)
+jsonP :: Parser JsonValue
+jsonP = nofail $ total $ valueP
 
 -- main :: IO ()
 -- main = do
@@ -129,25 +121,37 @@ main :: IO ()
 main = do
     args <- getArgs
     case args of 
-        [json] -> interpret json
+        [json, schema] -> interpret json schema
         _      -> error "Two arguments expected.."
 
 run :: IO ()
-run = interpret "tst.json"
+run = interpret "tst.json" "tst1.json"
 
-interpret :: FilePath -> IO ()
-interpret path = do
-    source <- readFile path
+-- CHANGE TO NOT REPEAT TODOO
+interpret :: FilePath -> FilePath -> IO ()
+interpret d schema = do
+    source <- readFile d
     let cps = preLex source -- chars and positions
     case jsonL cps of
         Error pos msg -> putStr $ errMsg pos msg source 
         OK (tlps,_) -> do
+            putStrLn "----- Data Document ------"
             print tlps -- tags lexemes positions
             case jsonP tlps of
                 Error pos msg -> putStr $ errMsg pos msg source
                 OK (json,_) -> do
                     print json
-                    -- verify json TODO
+                    schemaDoc <- readFile schema
+                    let cps' = preLex schemaDoc -- chars and positions
+                    case jsonL cps' of
+                        Error pos msg -> putStr $ errMsg pos msg schemaDoc 
+                        OK (tlps',_) -> do
+                            putStrLn "----- Schema Document ------"
+                            print tlps' -- tags lexemes positions
+                            case jsonP tlps' of
+                                Error pos msg -> putStr $ errMsg pos msg schemaDoc
+                                OK (jsonSchema,_) -> do
+                                    print jsonSchema
 
-
--- verify :: 
+verify :: JsonValue -> JsonValue -> IO ()
+verify data schema = undefined
