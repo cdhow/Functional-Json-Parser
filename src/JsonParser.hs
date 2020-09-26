@@ -6,34 +6,15 @@ module Main (main) where
 
 import System.Environment   
 import System.IO
-import qualified Data.Map as M
 import Data.Char
 
 import ABR.Util.Pos
 import ABR.Parser
 import ABR.Parser.Lexers
 
--- JsonMember
-data JsonMember = JsonMember String JsonValue
-    deriving (Show)
+import JsonVerifier (verify)
+import JsonTypes
 
--- JsonValue
-data JsonValue =
-      JsonNull
-    | JsonBool Bool
-    | JsonNumber Double
-    | JsonString String
-    | JsonArray [JsonValue]
-    | JsonObject [JsonMember]
-    deriving (Show)
-
-
--- SO WE CAN USE THINGS LIKE |> and <& to forget about stuff like ":" and "\""", etc (right associative)
-
--- GO THROUGH PARSERS AND ADD NOFAILS (SEE EXAMPLE) (we can also add error messages)
-
-
--- Copy BLOCK from lecture grammar for the members thingo
 -- Lexers -------------------------------------------------------------
 
 symbolL :: Lexer
@@ -109,49 +90,38 @@ valueP =
 jsonP :: Parser JsonValue
 jsonP = nofail $ total $ valueP
 
--- main :: IO ()
+main :: IO ()
+main = undefined
 -- main = do
 --     args <- getArgs
 --     case args of 
---         [json, verification] -> interpret 
---         _                    -> error "Two arguments expected.."
-
-
-main :: IO ()
-main = do
-    args <- getArgs
-    case args of 
-        [json, schema] -> interpret json schema
-        _      -> error "Two arguments expected.."
+--         [json, schema] -> interpret json
+--         _      -> error "Two arguments expected.."
 
 run :: IO ()
-run = interpret "tst.json" "tst1.json"
+run = do
+    putStrLn "----- Json Data Document ------"
+    j <- interpret "data_doc.json"
+    putStrLn "----- Json Schema Document ------"
+    s <- interpret "schema_doc.json"
+    if verify j s
+        then putStrLn "----- Verification Successful ------"
+        else putStrLn "----- Verification Failed ------"
 
 -- CHANGE TO NOT REPEAT TODOO
-interpret :: FilePath -> FilePath -> IO ()
-interpret d schema = do
-    source <- readFile d
+interpret :: FilePath -> IO JsonValue
+interpret doc = do
+    source <- readFile doc
     let cps = preLex source -- chars and positions
+    putStrLn "----- Chars and Positions ------"
+    print cps
     case jsonL cps of
-        Error pos msg -> putStr $ errMsg pos msg source 
+        -- Error pos msg -> print $ errMsg pos msg source 
         OK (tlps,_) -> do
-            putStrLn "----- Data Document ------"
+            putStrLn "----- Lexemes ------"
             print tlps -- tags lexemes positions
             case jsonP tlps of
-                Error pos msg -> putStr $ errMsg pos msg source
+                -- Error pos msg -> print $ errMsg pos msg source
                 OK (json,_) -> do
                     print json
-                    schemaDoc <- readFile schema
-                    let cps' = preLex schemaDoc -- chars and positions
-                    case jsonL cps' of
-                        Error pos msg -> putStr $ errMsg pos msg schemaDoc 
-                        OK (tlps',_) -> do
-                            putStrLn "----- Schema Document ------"
-                            print tlps' -- tags lexemes positions
-                            case jsonP tlps' of
-                                Error pos msg -> putStr $ errMsg pos msg schemaDoc
-                                OK (jsonSchema,_) -> do
-                                    print jsonSchema
-
-verify :: JsonValue -> JsonValue -> IO ()
-verify data schema = undefined
+                    return json
