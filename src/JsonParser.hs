@@ -108,7 +108,6 @@ run = do
         then putStrLn "----- Verification Successful ------"
         else putStrLn "----- Verification Failed ------"
 
--- CHANGE TO NOT REPEAT TODOO
 interpret :: FilePath -> IO JsonValue
 interpret doc = do
     source <- readFile doc
@@ -116,12 +115,16 @@ interpret doc = do
     putStrLn "----- Chars and Positions ------"
     print cps
     case jsonL cps of
-        -- Error pos msg -> print $ errMsg pos msg source 
+        Error pos msg -> do
+            print $ errMsg pos msg source
+            return JsonNull
         OK (tlps,_) -> do
             putStrLn "----- Lexemes ------"
             print tlps -- tags lexemes positions
             case jsonP tlps of
-                -- Error pos msg -> print $ errMsg pos msg source
+                Error pos msg -> do
+                    print $ errMsg pos msg source
+                    return JsonNull
                 OK (json,_) -> do
                     print json
                     return json

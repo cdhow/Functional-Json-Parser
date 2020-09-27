@@ -1,6 +1,7 @@
 module JsonVerifier (verify) where
 import JsonTypes
 
+-- TODO : CLEAN UP
 
 -- JsonSchemaType
 data JsonSchemaType = 
@@ -22,12 +23,16 @@ data JsonSchema =
   deriving (Show, Eq)
 
 compileSchema :: JsonValue -> JsonSchema
-compileSchema (JsonObject [JsonMember "\"type\"" (JsonString "\"null\"")] ) = JsonSchemaValue SchemaNull
-compileSchema (JsonObject [JsonMember "\"type\"" (JsonString "\"string\"")] ) = JsonSchemaValue SchemaString
-compileSchema (JsonObject [JsonMember "\"type\"" (JsonString "\"int\"")] ) = JsonSchemaValue SchemaInt
-compileSchema (JsonObject [JsonMember "\"type\"" (JsonString "\"bool\"")] ) = JsonSchemaValue SchemaBool
-compileSchema (JsonObject [JsonMember "\"type\"" (JsonString "\"array\""), JsonMember "\"element\"" e]) =
-    JsonSchemaArray (compileSchema e)
+compileSchema (JsonObject [JsonMember "\"type\"" (JsonString "\"null\"")]) 
+  = JsonSchemaValue SchemaNull
+compileSchema (JsonObject [JsonMember "\"type\"" (JsonString "\"string\"")]) 
+  = JsonSchemaValue SchemaString
+compileSchema (JsonObject [JsonMember "\"type\"" (JsonString "\"int\"")]) 
+  = JsonSchemaValue SchemaInt
+compileSchema (JsonObject [JsonMember "\"type\"" (JsonString "\"bool\"")]) 
+  = JsonSchemaValue SchemaBool
+compileSchema (JsonObject [JsonMember "\"type\"" (JsonString "\"array\""), JsonMember "\"element\"" e])
+                    = JsonSchemaArray (compileSchema e)
 compileSchema (JsonObject ((JsonMember "\"type\"" (JsonString "\"object\"")):props) ) =
     JsonSchemaObject . map (\(JsonMember name memberSchema) -> (name, compileSchema memberSchema) ) $ props
 compileSchema s = error $ "failed to compile - " ++ show s
