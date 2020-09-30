@@ -12,7 +12,7 @@ import ABR.Util.Pos
 import ABR.Parser
 import ABR.Parser.Lexers
 
-import JsonVerifier (verify)
+import JsonValidator (validator)
 import JsonTypes
 
 -- Lexers -------------------------------------------------------------
@@ -21,7 +21,6 @@ symbolL :: Lexer
 symbolL = literalL '{' <|> literalL '}' <|> literalL '[' <|>
           literalL ']' <|> literalL ',' <|> literalL '=' <|>
           literalL ':'
-
 
 -- For identifying keywords such as "true", "false", "null"
 keywordL :: Lexer
@@ -83,30 +82,54 @@ valueP =
         @> (\_ -> JsonBool False)
     <|> literalP "keyword" "null"
         @> (\_ -> JsonNull)
-    <|> objectP
     <|> arrayP
+    <|> objectP
 
 
 jsonP :: Parser JsonValue
 jsonP = nofail $ total $ valueP
 
 main :: IO ()
-main = undefined
--- main = do
---     args <- getArgs
---     case args of 
---         [json, schema] -> interpret json
---         _      -> error "Two arguments expected.."
+main = do
+    args <- getArgs
+    case args of 
+        [json, schema] -> do
+            putStrLn "----- Json Data Document ------"
+            j <- interpret json
+            if (isError j) 
+                then return ()
+                else do
+                    putStr "\n----- Json Schema Document ------\n"
+                    s <- interpret schema
+                    if (isError s) 
+                        then return ()
+                        else do
+                            if validator j s
+                                then putStrLn "----- Verification Successful ------"
+                                else putStrLn "----- Verification Failed ------"
+
+        _      -> error "Two arguments expected.."
+
+isError :: JsonValue -> Bool
+isError JsonError = True
+isError _        = False
 
 run :: IO ()
 run = do
     putStrLn "----- Json Data Document ------"
-    j <- interpret "data_doc.json"
-    putStrLn "----- Json Schema Document ------"
-    s <- interpret "schema_doc.json"
-    if verify j s
-        then putStrLn "----- Verification Successful ------"
-        else putStrLn "----- Verification Failed ------"
+    j <- interpret "data/deliverTo.json"
+    if (isError j) 
+        then return ()
+        else do
+            putStr "\n----- Json Schema Document ------\n"
+            s <- interpret "schema/deliverTo-schema.json"
+            if (isError s) 
+                then return ()
+                else do
+                    if validator j s
+                        then putStrLn "----- Verification Successful ------"
+                        else putStrLn "----- Verification Failed ------"
+
 
 interpret :: FilePath -> IO JsonValue
 interpret doc = do
@@ -116,15 +139,16 @@ interpret doc = do
     print cps
     case jsonL cps of
         Error pos msg -> do
-            print $ errMsg pos msg source
-            return JsonNull
+            putStr $ errMsg pos msg source
+            return JsonError
         OK (tlps,_) -> do
             putStrLn "----- Lexemes ------"
             print tlps -- tags lexemes positions
             case jsonP tlps of
                 Error pos msg -> do
-                    print $ errMsg pos msg source
-                    return JsonNull
+                    putStr $ errMsg pos msg source
+                    return JsonError
                 OK (json,_) -> do
+                    putStrLn "----- Parse Tree ------"
                     print json
                     return json

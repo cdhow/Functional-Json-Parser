@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "name": {"type": "name"},
+  "billingAddr": {"type": "address"},
+  "deliveryAddr": {"type": "address"},
+  "schemas": {
+    "name": {
+      "type": "object",
+      "firstName": {"type": "string"},
+      "lastName": {"type": "string"}
+    },
+    "address": {
+      "type": "object",
+      "street": {"type": "string"},
+      "suburb": {"type": "string"},
+      "state": {"type": "string"},
+      "postcode": {"type": "int"}
+    }
+  }
+}
