@@ -90,7 +90,6 @@ validate (JsonSchemaElementArray elementSchema) (JsonArray elements) =
 validate (JsonSchemaArray) (JsonArray _) = True
 validate (JsonSchemaObject memberSchemas customTypes) (JsonObject members) = 
     -- An object is validated if all of its members are validated
-    --all (== True) . map validateMember $ members
     -- To make it 1:1 (disallow missing)
     all (== True) . map validateMemberSchema $ memberSchemas
     where
